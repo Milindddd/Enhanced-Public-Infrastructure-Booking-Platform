@@ -30,14 +30,6 @@ A modern web application for booking public infrastructure facilities like commu
 - JWT Authentication
 - Razorpay Integration
 
-## 📋 Prerequisites
-
-- Node.js (v16 or higher)
-- Java JDK 17
-- PostgreSQL
-- Redis
-- Maven
-
 ## 🚀 Getting Started
 
 ### Frontend Setup
