@@ -2,14 +2,11 @@ package com.booking.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import java.util.List;
+import java.math.BigDecimal;
+import java.time.LocalTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
+@Data
 @Table(name = "facilities")
 public class Facility {
     @Id
@@ -20,21 +17,36 @@ public class Facility {
     private String name;
 
     @Column(nullable = false)
+    private String type; // HALL, PARK, CREMATORIUM, GUEST_HOUSE, STADIUM
+
+    @Column(nullable = false)
+    private String address;
+
+    @Column(nullable = false)
     private String description;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private FacilityType type;
+    private BigDecimal hourlyRate;
+
+    @Column(nullable = false)
+    private LocalTime openingTime;
+
+    @Column(nullable = false)
+    private LocalTime closingTime;
 
     @Column(nullable = false)
     private Integer maxCapacity;
 
     @Column(nullable = false)
-    private Double hourlyRate;
-
-    @Column(nullable = false)
     private Boolean isActive = true;
 
-    @OneToMany(mappedBy = "facility", cascade = CascadeType.ALL)
-    private List<Booking> bookings;
+    // Additional fields for specific facility types
+    @Column
+    private Boolean hasParking;
+
+    @Column
+    private Boolean hasCatering;
+
+    @Column
+    private String amenities; // JSON string of available amenities
 }
