@@ -37,6 +37,8 @@ A modern web application for booking public infrastructure facilities like commu
 - Java 17
 - PostgreSQL
 - Redis
+- JWT Authentication
+- Razorpay Integration
 
 ### Frontend Setup
 
