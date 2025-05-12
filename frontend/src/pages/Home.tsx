@@ -1,144 +1,80 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 import {
   Container,
+  Typography,
   Grid,
   Card,
   CardContent,
   CardMedia,
-  Typography,
   Button,
-  TextField,
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
 } from "@mui/material";
-import { Facility } from "../types";
-
-// Mock data - Replace with API call
-const mockFacilities: Facility[] = [
-  {
-    id: "1",
-    name: "Community Hall A",
-    type: "HALL",
-    description: "A spacious community hall perfect for events and gatherings.",
-    capacity: 200,
-    pricePerHour: 1000,
-    availableSlots: [],
-    images: ["https://source.unsplash.com/random/800x600/?hall"],
-  },
-  {
-    id: "2",
-    name: "Central Park",
-    type: "PARK",
-    description: "Beautiful park with playground and sports facilities.",
-    pricePerHour: 500,
-    availableSlots: [],
-    images: ["https://source.unsplash.com/random/800x600/?park"],
-  },
-  // Add more mock facilities as needed
-];
+import { useNavigate } from "react-router-dom";
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [facilityType, setFacilityType] = useState<string>("");
 
-  const handleFacilityTypeChange = (event: SelectChangeEvent) => {
-    setFacilityType(event.target.value);
-  };
-
-  const filteredFacilities = mockFacilities.filter((facility) => {
-    const matchesSearch =
-      facility.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      facility.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !facilityType || facility.type === facilityType;
-    return matchesSearch && matchesType;
-  });
+  const facilities = [
+    {
+      id: 1,
+      name: "Community Hall",
+      description: "Perfect for social gatherings and events",
+      image: "/images/community-hall.jpg",
+    },
+    {
+      id: 2,
+      name: "Park",
+      description: "Beautiful outdoor space for recreation",
+      image: "/images/park.jpg",
+    },
+    {
+      id: 3,
+      name: "Stadium",
+      description: "Sports and large-scale events venue",
+      image: "/images/stadium.jpg",
+    },
+  ];
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Available Facilities
-        </Typography>
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              label="Search facilities"
-              variant="outlined"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth>
-              <InputLabel>Facility Type</InputLabel>
-              <Select
-                value={facilityType}
-                label="Facility Type"
-                onChange={handleFacilityTypeChange}
-              >
-                <MenuItem value="">All Types</MenuItem>
-                <MenuItem value="HALL">Community Hall</MenuItem>
-                <MenuItem value="PARK">Park</MenuItem>
-                <MenuItem value="CREMATORIUM">Crematorium</MenuItem>
-                <MenuItem value="GUEST_HOUSE">Guest House</MenuItem>
-                <MenuItem value="STADIUM">Stadium</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-      </Box>
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Typography variant="h3" component="h1" gutterBottom align="center">
+        Welcome to Public Infrastructure Booking
+      </Typography>
+      <Typography
+        variant="h5"
+        component="h2"
+        gutterBottom
+        align="center"
+        color="text.secondary"
+      >
+        Book public facilities with ease
+      </Typography>
 
-      <Grid container spacing={4}>
-        {filteredFacilities.map((facility) => (
-          <Grid item key={facility.id} xs={12} sm={6} md={4}>
-            <Card
-              sx={{
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                "&:hover": {
-                  boxShadow: 6,
-                },
-              }}
-            >
+      <Grid container spacing={4} sx={{ mt: 4 }}>
+        {facilities.map((facility) => (
+          <Grid item xs={12} sm={6} md={4} key={facility.id}>
+            <Card>
               <CardMedia
                 component="img"
                 height="200"
-                image={facility.images[0]}
+                image={facility.image}
                 alt={facility.name}
               />
-              <CardContent sx={{ flexGrow: 1 }}>
+              <CardContent>
                 <Typography gutterBottom variant="h5" component="h2">
                   {facility.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" paragraph>
+                <Typography variant="body2" color="text.secondary">
                   {facility.description}
                 </Typography>
-                {facility.capacity && (
-                  <Typography variant="body2" color="text.secondary">
-                    Capacity: {facility.capacity} people
-                  </Typography>
-                )}
-                <Typography variant="body2" color="text.secondary">
-                  Price: ₹{facility.pricePerHour}/hour
-                </Typography>
-              </CardContent>
-              <Box sx={{ p: 2 }}>
                 <Button
-                  fullWidth
                   variant="contained"
-                  onClick={() => navigate(`/book/${facility.id}`)}
+                  color="primary"
+                  sx={{ mt: 2 }}
+                  onClick={() => navigate(`/facilities/${facility.id}`)}
                 >
                   Book Now
                 </Button>
-              </Box>
+              </CardContent>
             </Card>
           </Grid>
         ))}

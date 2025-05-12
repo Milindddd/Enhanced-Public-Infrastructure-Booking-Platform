@@ -2,8 +2,13 @@ package com.booking.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import java.time.LocalDateTime;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "payments")
 public class Payment {
@@ -22,17 +27,15 @@ public class Payment {
     @Column(nullable = false)
     private PaymentStatus status = PaymentStatus.PENDING;
 
-    @Column(name = "payment_method", nullable = false)
-    private String paymentMethod;
-
-    @Column(name = "transaction_id")
+    @Column(nullable = false)
     private String transactionId;
 
-    @Column(name = "created_at", nullable = false)
-    private java.time.LocalDateTime createdAt;
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = java.time.LocalDateTime.now();
-    }
-} 
+    @Column
+    private LocalDateTime refundedAt;
+
+    @Column
+    private Double refundAmount;
+}

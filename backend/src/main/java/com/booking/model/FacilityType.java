@@ -1,9 +1,9 @@
 package com.booking.model;
 
 public enum FacilityType {
-    HALL,
+    COMMUNITY_HALL,
     PARK,
     CREMATORIUM,
     GUEST_HOUSE,
     STADIUM
-} 
+}

@@ -2,9 +2,13 @@ package com.booking.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "facilities")
 public class Facility {
@@ -15,23 +19,22 @@ public class Facility {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private String description;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FacilityType type;
 
-    @Column(length = 1000)
-    private String description;
+    @Column(nullable = false)
+    private Integer maxCapacity;
 
-    private Integer capacity;
+    @Column(nullable = false)
+    private Double hourlyRate;
 
-    @Column(name = "price_per_hour", nullable = false)
-    private Double pricePerHour;
-
-    @ElementCollection
-    @CollectionTable(name = "facility_images", joinColumns = @JoinColumn(name = "facility_id"))
-    @Column(name = "image_url")
-    private List<String> images;
+    @Column(nullable = false)
+    private Boolean isActive = true;
 
     @OneToMany(mappedBy = "facility", cascade = CascadeType.ALL)
-    private List<TimeSlot> availableSlots;
-} 
+    private List<Booking> bookings;
+}

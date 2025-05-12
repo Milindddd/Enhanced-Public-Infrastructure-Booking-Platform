@@ -1,6 +1,6 @@
 package com.booking.model;
 
 public enum UserRole {
-    USER,
+    CITIZEN,
     ADMIN
 }

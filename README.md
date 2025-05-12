@@ -2,97 +2,119 @@
 
 A modern web application for booking public infrastructure facilities like community halls, parks, crematoriums, guest houses, and stadiums.
 
-## 🚀 Features
+## Features
 
-- Dynamic facility booking system
-- Real-time slot availability
-- Secure payment processing
-- Booking management dashboard
+- Dynamic form fields based on facility selection
+- Slot availability & booking concurrency control
+- Secure online payment simulation
+- Real-time status updates
+- Cancellation and refund logic
 - Admin panel for facility management
-- Responsive design for all devices
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 
-- React.js
-- Material UI
-- React Router
-- React Hook Form
-- Redux Toolkit
-- Axios
+- React.js with TypeScript
+- Material UI for components
+- React Router for navigation
+- React Hook Form for form handling
+- Axios for API calls
 
 ### Backend
 
-- Spring Boot
+- Spring Boot (Java)
+- PostgreSQL for data storage
+- Redis for caching and locking
+- JWT for authentication
+- Spring Security
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v14 or higher)
+- Java 17
 - PostgreSQL
 - Redis
-- JWT Authentication
-- Razorpay Integration
-
-## 📋 Prerequisites
-
-- Node.js (v16 or higher)
-- Java JDK 17
-- PostgreSQL
-- Redis
-- Maven
-
-## 🚀 Getting Started
 
 ### Frontend Setup
 
-```bash
-cd frontend
-npm install
-npm start
-```
+1. Navigate to the frontend directory:
+
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Start the development server:
+   ```bash
+   npm start
+   ```
 
 ### Backend Setup
 
-```bash
-cd backend
-mvn spring-boot:run
-```
+1. Navigate to the backend directory:
 
-## 📁 Project Structure
+   ```bash
+   cd backend
+   ```
+
+2. Build the project:
+
+   ```bash
+   ./mvnw clean install
+   ```
+
+3. Run the application:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+
+## Project Structure
 
 ```
-├── frontend/               # React frontend application
+├── frontend/
 │   ├── src/
-│   │   ├── components/    # Reusable UI components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API services
-│   │   ├── store/        # Redux store
-│   │   └── utils/        # Utility functions
-│   └── public/           # Static files
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── types/
+│   │   └── utils/
+│   └── package.json
 │
-└── backend/              # Spring Boot backend application
+└── backend/
     ├── src/
     │   ├── main/
-    │   │   ├── java/    # Java source files
-    │   │   └── resources/ # Configuration files
-    │   └── test/        # Test files
-    └── pom.xml          # Maven configuration
+    │   │   ├── java/
+    │   │   │   └── com/booking/
+    │   │   │       ├── controller/
+    │   │   │       ├── model/
+    │   │   │       ├── repository/
+    │   │   │       ├── service/
+    │   │   │       └── config/
+    │   │   └── resources/
+    │   └── test/
+    └── pom.xml
 ```
 
-## 🔐 Environment Variables
+## API Documentation
 
-### Frontend (.env)
+The API documentation will be available at `/swagger-ui.html` when running the backend server.
 
-```
-REACT_APP_API_URL=http://localhost:8080
-REACT_APP_RAZORPAY_KEY=your_razorpay_key
-```
+## Contributing
 
-### Backend (application.properties)
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-```
-spring.datasource.url=jdbc:postgresql://localhost:5432/booking_platform
-spring.datasource.username=your_username
-spring.datasource.password=your_password
-```
-
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useNavigate, Link as RouterLink } from "react-router-dom";
+import React from "react";
 import {
   Container,
   Paper,
@@ -8,8 +7,8 @@ import {
   Button,
   Box,
   Link,
-  Alert,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 
 interface LoginFormData {
@@ -19,7 +18,6 @@ interface LoginFormData {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [error, setError] = useState<string>("");
   const {
     register,
     handleSubmit,
@@ -28,27 +26,20 @@ const Login: React.FC = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      // TODO: Implement actual login logic
+      // TODO: Implement login logic
       console.log("Login data:", data);
-      navigate("/dashboard");
-    } catch (err) {
-      setError("Invalid email or password");
+      navigate("/");
+    } catch (error) {
+      console.error("Login error:", error);
     }
   };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 8 }}>
-      <Paper sx={{ p: 4 }}>
+      <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h4" component="h1" align="center" gutterBottom>
           Login
         </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
         <form onSubmit={handleSubmit(onSubmit)}>
           <TextField
             fullWidth
@@ -65,7 +56,6 @@ const Login: React.FC = () => {
             error={!!errors.email}
             helperText={errors.email?.message}
           />
-
           <TextField
             fullWidth
             label="Password"
@@ -81,24 +71,23 @@ const Login: React.FC = () => {
             error={!!errors.password}
             helperText={errors.password?.message}
           />
-
           <Button
             type="submit"
             fullWidth
             variant="contained"
-            size="large"
-            sx={{ mt: 3 }}
+            color="primary"
+            sx={{ mt: 3, mb: 2 }}
           >
             Login
           </Button>
-
-          <Box sx={{ mt: 2, textAlign: "center" }}>
-            <Typography variant="body2">
-              Don't have an account?{" "}
-              <Link component={RouterLink} to="/register">
-                Register here
-              </Link>
-            </Typography>
+          <Box textAlign="center">
+            <Link
+              component="button"
+              variant="body2"
+              onClick={() => navigate("/register")}
+            >
+              Don't have an account? Register here
+            </Link>
           </Box>
         </form>
       </Paper>
