@@ -2,14 +2,11 @@ package com.booking.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
+@Data
 @Table(name = "bookings")
 public class Booking {
     @Id
@@ -17,12 +14,11 @@ public class Booking {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne
     @JoinColumn(name = "facility_id", nullable = false)
     private Facility facility;
+
+    @Column(nullable = false)
+    private String userId;
 
     @Column(nullable = false)
     private LocalDateTime startTime;
@@ -31,18 +27,35 @@ public class Booking {
     private LocalDateTime endTime;
 
     @Column(nullable = false)
-    private Double totalAmount;
+    private Integer numberOfPeople;
 
+    @Column(nullable = false)
+    private BigDecimal totalAmount;
+
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private BookingStatus status = BookingStatus.PENDING;
-
-    @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private BookingStatus status;
 
     @Column
-    private LocalDateTime cancelledAt;
+    private String purpose;
 
     @Column
-    private Double refundAmount;
+    private String additionalRequirements;
+
+    @Column
+    private LocalDateTime createdAt;
+
+    @Column
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }
