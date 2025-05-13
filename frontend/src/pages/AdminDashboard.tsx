@@ -1,82 +1,59 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Container,
+  Box,
+  Card,
+  CardContent,
   Typography,
   Grid,
-  Paper,
   Tabs,
   Tab,
-  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Alert,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Button,
+  Paper,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
 } from "@mui/material";
 import { format } from "date-fns";
-import { Facility, Booking } from "../types";
+import axios from "axios";
 
-// Mock data - Replace with API calls
-const mockFacilities: Facility[] = [
-  {
-    id: "1",
-    name: "Community Hall A",
-    type: "HALL",
-    description: "A spacious community hall perfect for events and gatherings.",
-    capacity: 200,
-    pricePerHour: 1000,
-    availableSlots: [],
-    images: ["https://source.unsplash.com/random/800x600/?hall"],
-  },
-  {
-    id: "2",
-    name: "Central Park",
-    type: "PARK",
-    description: "Beautiful park with playground and sports facilities.",
-    pricePerHour: 500,
-    availableSlots: [],
-    images: ["https://source.unsplash.com/random/800x600/?park"],
-  },
-];
+interface Facility {
+  id: number;
+  name: string;
+  type: string;
+  description: string;
+  location: string;
+  hourlyRate: number;
+  capacity: number;
+  isActive: boolean;
+}
 
-const mockBookings: Booking[] = [
-  {
-    id: "123",
-    facilityId: "1",
-    userId: "user1",
-    date: "2024-03-20",
-    startTime: "14:00",
-    endTime: "16:00",
-    totalAmount: 2000,
-    status: "CONFIRMED",
-    paymentStatus: "COMPLETED",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "124",
-    facilityId: "2",
-    userId: "user1",
-    date: "2024-03-25",
-    startTime: "10:00",
-    endTime: "12:00",
-    totalAmount: 1000,
-    status: "PENDING",
-    paymentStatus: "PENDING",
-    createdAt: new Date().toISOString(),
-  },
-];
+interface Booking {
+  id: number;
+  facility: {
+    id: number;
+    name: string;
+    type: string;
+    location: string;
+  };
+  userId: string;
+  startTime: string;
+  endTime: string;
+  totalAmount: number;
+  status: string;
+  paymentId: string | null;
+  createdAt: string;
+}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -102,165 +79,291 @@ function TabPanel(props: TabPanelProps) {
 
 const AdminDashboard: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(
     null
   );
+  const [newFacility, setNewFacility] = useState<Partial<Facility>>({
+    name: "",
+    type: "",
+    description: "",
+    location: "",
+    hourlyRate: 0,
+    capacity: 0,
+    isActive: true,
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [facilitiesRes, bookingsRes] = await Promise.all([
+        axios.get("http://localhost:8080/api/facilities"),
+        axios.get("http://localhost:8080/api/bookings"),
+      ]);
+      setFacilities(facilitiesRes.data);
+      setBookings(bookingsRes.data);
+    } catch (error) {
+      setError("Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
+  const handleFacilityStatus = async (
+    facilityId: number,
+    isActive: boolean
+  ) => {
+    try {
+      await axios.patch(`http://localhost:8080/api/facilities/${facilityId}`, {
+        isActive,
+      });
+      fetchData();
+    } catch (error) {
+      setError("Failed to update facility status");
+    }
+  };
+
+  const handleBookingStatus = async (bookingId: number, status: string) => {
+    try {
+      await axios.patch(
+        `http://localhost:8080/api/bookings/${bookingId}/status`,
+        {
+          status,
+        }
+      );
+      fetchData();
+    } catch (error) {
+      setError("Failed to update booking status");
+    }
+  };
+
   const handleAddFacility = () => {
     setSelectedFacility(null);
+    setNewFacility({
+      name: "",
+      type: "",
+      description: "",
+      location: "",
+      hourlyRate: 0,
+      capacity: 0,
+      isActive: true,
+    });
     setOpenDialog(true);
   };
 
   const handleEditFacility = (facility: Facility) => {
     setSelectedFacility(facility);
+    setNewFacility(facility);
     setOpenDialog(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
-    setSelectedFacility(null);
-  };
-
-  const handleSaveFacility = () => {
-    // TODO: Implement save facility logic
-    handleCloseDialog();
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "CONFIRMED":
-        return "success";
-      case "PENDING":
-        return "warning";
-      case "CANCELLED":
-        return "error";
-      default:
-        return "default";
+  const handleSaveFacility = async () => {
+    try {
+      if (selectedFacility) {
+        await axios.put(
+          `http://localhost:8080/api/facilities/${selectedFacility.id}`,
+          newFacility
+        );
+      } else {
+        await axios.post("http://localhost:8080/api/facilities", newFacility);
+      }
+      setOpenDialog(false);
+      fetchData();
+    } catch (error) {
+      setError("Failed to save facility");
     }
   };
 
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Box p={3}>
       <Typography variant="h4" gutterBottom>
         Admin Dashboard
       </Typography>
 
-      <Paper sx={{ width: "100%", mb: 2 }}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-        >
-          <Tab label="Facilities" />
-          <Tab label="Bookings" />
-        </Tabs>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Tabs value={tabValue} onChange={handleTabChange}>
+            <Tab label="Facilities" />
+            <Tab label="Bookings" />
+          </Tabs>
 
-        <TabPanel value={tabValue} index={0}>
-          <Box sx={{ mb: 2 }}>
+          <TabPanel value={tabValue} index={0}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+
             <Button
               variant="contained"
               color="primary"
               onClick={handleAddFacility}
+              sx={{ mb: 2 }}
             >
               Add New Facility
             </Button>
-          </Box>
 
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell>Capacity</TableCell>
-                  <TableCell>Price/Hour</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {mockFacilities.map((facility) => (
-                  <TableRow key={facility.id}>
-                    <TableCell>{facility.name}</TableCell>
-                    <TableCell>{facility.type}</TableCell>
-                    <TableCell>{facility.capacity || "N/A"}</TableCell>
-                    <TableCell>₹{facility.pricePerHour}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="small"
-                        onClick={() => handleEditFacility(facility)}
-                      >
-                        Edit
-                      </Button>
-                    </TableCell>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Location</TableCell>
+                    <TableCell>Rate/Hour</TableCell>
+                    <TableCell>Capacity</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </TabPanel>
+                </TableHead>
+                <TableBody>
+                  {facilities.map((facility) => (
+                    <TableRow key={facility.id}>
+                      <TableCell>{facility.name}</TableCell>
+                      <TableCell>{facility.type}</TableCell>
+                      <TableCell>{facility.location}</TableCell>
+                      <TableCell>${facility.hourlyRate}</TableCell>
+                      <TableCell>{facility.capacity}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={facility.isActive ? "Active" : "Inactive"}
+                          color={facility.isActive ? "success" : "error"}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleEditFacility(facility)}
+                          sx={{ mr: 1 }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color={facility.isActive ? "error" : "success"}
+                          onClick={() =>
+                            handleFacilityStatus(
+                              facility.id,
+                              !facility.isActive
+                            )
+                          }
+                        >
+                          {facility.isActive ? "Deactivate" : "Activate"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
 
-        <TabPanel value={tabValue} index={1}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Booking ID</TableCell>
-                  <TableCell>Facility</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Time</TableCell>
-                  <TableCell>Amount</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Payment Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {mockBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>{booking.id}</TableCell>
-                    <TableCell>
-                      {
-                        mockFacilities.find((f) => f.id === booking.facilityId)
-                          ?.name
-                      }
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(booking.date), "PPP")}
-                    </TableCell>
-                    <TableCell>
-                      {booking.startTime} - {booking.endTime}
-                    </TableCell>
-                    <TableCell>₹{booking.totalAmount}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={booking.status}
-                        color={getStatusColor(booking.status) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={booking.paymentStatus}
-                        color={getStatusColor(booking.paymentStatus) as any}
-                        size="small"
-                      />
-                    </TableCell>
+          <TabPanel value={tabValue} index={1}>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Facility</TableCell>
+                    <TableCell>User</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </TabPanel>
-      </Paper>
+                </TableHead>
+                <TableBody>
+                  {bookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell>{booking.facility.name}</TableCell>
+                      <TableCell>{booking.userId}</TableCell>
+                      <TableCell>
+                        {format(new Date(booking.startTime), "MMM dd, yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(booking.startTime), "HH:mm")} -{" "}
+                        {format(new Date(booking.endTime), "HH:mm")}
+                      </TableCell>
+                      <TableCell>${booking.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={booking.status}
+                          color={
+                            booking.status === "CONFIRMED"
+                              ? "success"
+                              : booking.status === "PENDING"
+                              ? "warning"
+                              : "error"
+                          }
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {booking.status === "PENDING" && (
+                          <>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="success"
+                              onClick={() =>
+                                handleBookingStatus(booking.id, "CONFIRMED")
+                              }
+                              sx={{ mr: 1 }}
+                            >
+                              Confirm
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() =>
+                                handleBookingStatus(booking.id, "REJECTED")
+                              }
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
+        </CardContent>
+      </Card>
 
       <Dialog
         open={openDialog}
-        onClose={handleCloseDialog}
+        onClose={() => setOpenDialog(false)}
         maxWidth="sm"
         fullWidth
       >
@@ -268,64 +371,84 @@ const AdminDashboard: React.FC = () => {
           {selectedFacility ? "Edit Facility" : "Add New Facility"}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Facility Name"
-                defaultValue={selectedFacility?.name}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Facility Type</InputLabel>
-                <Select
-                  label="Facility Type"
-                  defaultValue={selectedFacility?.type || ""}
-                >
-                  <MenuItem value="HALL">Community Hall</MenuItem>
-                  <MenuItem value="PARK">Park</MenuItem>
-                  <MenuItem value="CREMATORIUM">Crematorium</MenuItem>
-                  <MenuItem value="GUEST_HOUSE">Guest House</MenuItem>
-                  <MenuItem value="STADIUM">Stadium</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={4}
-                defaultValue={selectedFacility?.description}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Capacity"
-                type="number"
-                defaultValue={selectedFacility?.capacity}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Price per Hour"
-                type="number"
-                defaultValue={selectedFacility?.pricePerHour}
-              />
-            </Grid>
-          </Grid>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={newFacility.name}
+              onChange={(e) =>
+                setNewFacility({ ...newFacility, name: e.target.value })
+              }
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Type"
+              value={newFacility.type}
+              onChange={(e) =>
+                setNewFacility({ ...newFacility, type: e.target.value })
+              }
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              multiline
+              rows={3}
+              value={newFacility.description}
+              onChange={(e) =>
+                setNewFacility({ ...newFacility, description: e.target.value })
+              }
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Location"
+              value={newFacility.location}
+              onChange={(e) =>
+                setNewFacility({ ...newFacility, location: e.target.value })
+              }
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Hourly Rate"
+              type="number"
+              value={newFacility.hourlyRate}
+              onChange={(e) =>
+                setNewFacility({
+                  ...newFacility,
+                  hourlyRate: parseFloat(e.target.value),
+                })
+              }
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Capacity"
+              type="number"
+              value={newFacility.capacity}
+              onChange={(e) =>
+                setNewFacility({
+                  ...newFacility,
+                  capacity: parseInt(e.target.value),
+                })
+              }
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSaveFacility} variant="contained">
+          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+          <Button
+            onClick={handleSaveFacility}
+            variant="contained"
+            color="primary"
+          >
             Save
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

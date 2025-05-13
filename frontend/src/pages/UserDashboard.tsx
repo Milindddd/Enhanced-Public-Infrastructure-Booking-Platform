@@ -1,18 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Container,
-  Typography,
-  Grid,
+  Box,
   Card,
   CardContent,
+  Typography,
+  Grid,
+  Tabs,
+  Tab,
   Button,
-  Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Chip,
+  CircularProgress,
+  Alert,
   Table,
   TableBody,
   TableCell,
@@ -21,51 +20,73 @@ import {
   TableRow,
   Paper,
 } from "@mui/material";
-import { format, isAfter, isBefore, addHours } from "date-fns";
-import { Booking } from "../types";
+import { format } from "date-fns";
+import axios from "axios";
 
-// Mock data - Replace with API call
-const mockBookings: Booking[] = [
-  {
-    id: "123",
-    facilityId: "1",
-    userId: "user1",
-    date: "2024-03-20",
-    startTime: "14:00",
-    endTime: "16:00",
-    totalAmount: 2000,
-    status: "CONFIRMED",
-    paymentStatus: "COMPLETED",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: "124",
-    facilityId: "2",
-    userId: "user1",
-    date: "2024-03-25",
-    startTime: "10:00",
-    endTime: "12:00",
-    totalAmount: 1000,
-    status: "PENDING",
-    paymentStatus: "PENDING",
-    createdAt: new Date().toISOString(),
-  },
-];
+interface Booking {
+  id: number;
+  facility: {
+    id: number;
+    name: string;
+    type: string;
+    location: string;
+  };
+  startTime: string;
+  endTime: string;
+  totalAmount: number;
+  status: string;
+  paymentId: string | null;
+  createdAt: string;
+}
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleCancelBooking = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setOpenDialog(true);
+  useEffect(() => {
+    fetchUserBookings();
+  }, []);
+
+  const fetchUserBookings = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:8080/api/bookings/user/user123"
+      ); // TODO: Replace with actual user ID
+      setBookings(response.data);
+    } catch (error) {
+      setError("Failed to fetch bookings");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const confirmCancellation = () => {
-    // TODO: Implement cancellation logic
-    console.log("Cancelling booking:", selectedBooking?.id);
-    setOpenDialog(false);
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
   };
 
   const getStatusColor = (status: string) => {
@@ -76,99 +97,188 @@ const UserDashboard: React.FC = () => {
         return "warning";
       case "CANCELLED":
         return "error";
+      case "COMPLETED":
+        return "info";
       default:
         return "default";
     }
   };
 
-  const canCancelBooking = (booking: Booking) => {
-    const bookingDate = new Date(`${booking.date}T${booking.startTime}`);
-    const now = new Date();
-    const hoursUntilBooking =
-      (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return hoursUntilBooking >= 24 && booking.status === "CONFIRMED";
+  const handlePayment = async (bookingId: number) => {
+    try {
+      await axios.patch(
+        `http://localhost:8080/api/bookings/${bookingId}/confirm`,
+        {
+          paymentId: "mock_payment_" + Date.now(),
+        }
+      );
+      fetchUserBookings();
+    } catch (error) {
+      setError("Failed to process payment");
+    }
   };
 
+  const handleCancel = async (bookingId: number) => {
+    if (window.confirm("Are you sure you want to cancel this booking?")) {
+      try {
+        await axios.patch(
+          `http://localhost:8080/api/bookings/${bookingId}/cancel`,
+          {
+            reason: "Cancelled by user",
+          }
+        );
+        fetchUserBookings();
+      } catch (error) {
+        setError("Failed to cancel booking");
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Box p={3}>
       <Typography variant="h4" gutterBottom>
-        My Bookings
+        User Dashboard
       </Typography>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Booking ID</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Time</TableCell>
-              <TableCell>Amount</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Payment Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {mockBookings.map((booking) => (
-              <TableRow key={booking.id}>
-                <TableCell>{booking.id}</TableCell>
-                <TableCell>{format(new Date(booking.date), "PPP")}</TableCell>
-                <TableCell>
-                  {booking.startTime} - {booking.endTime}
-                </TableCell>
-                <TableCell>₹{booking.totalAmount}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={booking.status}
-                    color={getStatusColor(booking.status) as any}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={booking.paymentStatus}
-                    color={getStatusColor(booking.paymentStatus) as any}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {canCancelBooking(booking) && (
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      onClick={() => handleCancelBooking(booking)}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Tabs value={tabValue} onChange={handleTabChange}>
+            <Tab label="My Bookings" />
+            <Tab label="Profile" />
+          </Tabs>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Cancel Booking</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to cancel this booking? You will receive a
-            full refund if cancelled 24 hours before the booking time.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>No, Keep Booking</Button>
-          <Button
-            onClick={confirmCancellation}
-            color="error"
-            variant="contained"
-          >
-            Yes, Cancel Booking
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+          <TabPanel value={tabValue} index={0}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Facility</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {bookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell>{booking.facility.name}</TableCell>
+                      <TableCell>
+                        {format(new Date(booking.startTime), "MMM dd, yyyy")}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(booking.startTime), "HH:mm")} -{" "}
+                        {format(new Date(booking.endTime), "HH:mm")}
+                      </TableCell>
+                      <TableCell>${booking.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={booking.status}
+                          color={getStatusColor(booking.status) as any}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {booking.status === "PENDING" && (
+                          <>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="primary"
+                              onClick={() => handlePayment(booking.id)}
+                              sx={{ mr: 1 }}
+                            >
+                              Pay
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() => handleCancel(booking.id)}
+                            >
+                              Cancel
+                            </Button>
+                          </>
+                        )}
+                        {booking.status === "CONFIRMED" && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleCancel(booking.id)}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={1}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Profile Information
+                    </Typography>
+                    <Typography variant="body1">Name: John Doe</Typography>
+                    <Typography variant="body1">
+                      Email: john.doe@example.com
+                    </Typography>
+                    <Typography variant="body1">
+                      Phone: +1 234 567 8900
+                    </Typography>
+                    <Button variant="contained" color="primary" sx={{ mt: 2 }}>
+                      Edit Profile
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      Payment Methods
+                    </Typography>
+                    <Typography variant="body1">
+                      No payment methods added
+                    </Typography>
+                    <Button variant="contained" color="primary" sx={{ mt: 2 }}>
+                      Add Payment Method
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </TabPanel>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

@@ -9,6 +9,10 @@ import java.util.List;
 public interface FacilityRepository extends JpaRepository<Facility, Long> {
     List<Facility> findByType(String type);
 
+    List<Facility> findByIsActiveTrue();
+
+    List<Facility> findByLocationContainingIgnoreCase(String location);
+
     List<Facility> findByIsActive(Boolean isActive);
 
     List<Facility> findByTypeAndIsActive(String type, Boolean isActive);

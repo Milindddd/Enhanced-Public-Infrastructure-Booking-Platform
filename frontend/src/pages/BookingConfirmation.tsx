@@ -1,130 +1,223 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Container,
-  Paper,
-  Typography,
-  Grid,
-  Button,
   Box,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Grid,
+  Alert,
+  CircularProgress,
+  Chip,
+  Dialog,
 } from "@mui/material";
 import { format } from "date-fns";
-import { Booking } from "../types";
+import axios from "axios";
+import PaymentForm from "../components/PaymentForm";
 
-// Mock data - Replace with API call
-const mockBooking: Booking = {
-  id: "123",
-  facilityId: "1",
-  userId: "user1",
-  date: "2024-03-20",
-  startTime: "14:00",
-  endTime: "16:00",
-  totalAmount: 2000,
-  status: "CONFIRMED",
-  paymentStatus: "COMPLETED",
-  createdAt: new Date().toISOString(),
-};
+interface Booking {
+  id: number;
+  facility: {
+    id: number;
+    name: string;
+    type: string;
+    location: string;
+  };
+  startTime: string;
+  endTime: string;
+  totalAmount: number;
+  status: string;
+  paymentId: string | null;
+  createdAt: string;
+}
 
 const BookingConfirmation: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
-  const handleDownloadReceipt = () => {
-    // TODO: Implement receipt download
-    console.log("Downloading receipt...");
+  useEffect(() => {
+    fetchBooking();
+  }, [bookingId]);
+
+  const fetchBooking = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8080/api/bookings/${bookingId}`
+      );
+      setBooking(response.data);
+    } catch (error) {
+      setError("Failed to fetch booking details");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleViewBookings = () => {
-    navigate("/dashboard");
+  const handlePaymentSuccess = async () => {
+    try {
+      await axios.patch(
+        `http://localhost:8080/api/bookings/${bookingId}/confirm`,
+        {
+          paymentId: "mock_payment_" + Date.now(),
+        }
+      );
+      setShowPaymentForm(false);
+      fetchBooking();
+    } catch (error) {
+      setError("Failed to process payment");
+    }
   };
+
+  const handleCancel = async () => {
+    if (window.confirm("Are you sure you want to cancel this booking?")) {
+      try {
+        const response = await axios.patch(
+          `http://localhost:8080/api/bookings/${bookingId}/cancel`,
+          {
+            reason: "Cancelled by user",
+          }
+        );
+        setBooking(response.data);
+      } catch (error) {
+        setError("Failed to cancel booking");
+      }
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "CONFIRMED":
+        return "success";
+      case "PENDING":
+        return "warning";
+      case "CANCELLED":
+        return "error";
+      case "COMPLETED":
+        return "info";
+      default:
+        return "default";
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!booking) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">Booking not found</Alert>
+      </Box>
+    );
+  }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Box sx={{ textAlign: "center", mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            Booking Confirmed!
-          </Typography>
-          <Typography variant="subtitle1" color="success.main">
-            Your booking has been successfully confirmed
-          </Typography>
+    <Box p={3}>
+      <Card>
+        <CardContent>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={3}
+          >
+            <Typography variant="h5">Booking Confirmation</Typography>
+            <Chip
+              label={booking.status}
+              color={getStatusColor(booking.status) as any}
+            />
+          </Box>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" gutterBottom>
+                Facility Details
+              </Typography>
+              <Typography variant="body1">{booking.facility.name}</Typography>
+              <Typography variant="body2" color="textSecondary">
+                Type: {booking.facility.type}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Location: {booking.facility.location}
+              </Typography>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1" gutterBottom>
+                Booking Details
+              </Typography>
+              <Typography variant="body2">
+                Start Time: {format(new Date(booking.startTime), "PPp")}
+              </Typography>
+              <Typography variant="body2">
+                End Time: {format(new Date(booking.endTime), "PPp")}
+              </Typography>
+              <Typography variant="body2">
+                Total Amount: ${booking.totalAmount.toFixed(2)}
+              </Typography>
+              <Typography variant="body2">
+                Booking Date: {format(new Date(booking.createdAt), "PPp")}
+              </Typography>
+            </Grid>
+          </Grid>
+
+          {error && (
+            <Alert severity="error" sx={{ mt: 3 }}>
+              {error}
+            </Alert>
+          )}
+
+          <Box display="flex" gap={2} mt={3}>
+            {booking.status === "PENDING" && (
+              <>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => setShowPaymentForm(true)}
+                >
+                  Proceed to Payment
+                </Button>
+                <Button variant="outlined" color="error" onClick={handleCancel}>
+                  Cancel Booking
+                </Button>
+              </>
+            )}
+            <Button variant="outlined" onClick={() => navigate("/facilities")}>
+              Back to Facilities
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showPaymentForm}
+        onClose={() => setShowPaymentForm(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <Box p={3}>
+          <PaymentForm
+            bookingId={booking.id}
+            amount={booking.totalAmount}
+            onSuccess={handlePaymentSuccess}
+            onCancel={() => setShowPaymentForm(false)}
+          />
         </Box>
-
-        <Grid container spacing={4}>
-          <Grid item xs={12}>
-            <Typography variant="h6" gutterBottom>
-              Booking Details
-            </Typography>
-            <TableContainer>
-              <Table>
-                <TableBody>
-                  <TableRow>
-                    <TableCell component="th" scope="row">
-                      Booking ID
-                    </TableCell>
-                    <TableCell>{mockBooking.id}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell component="th" scope="row">
-                      Date
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(mockBooking.date), "PPP")}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell component="th" scope="row">
-                      Time
-                    </TableCell>
-                    <TableCell>
-                      {mockBooking.startTime} - {mockBooking.endTime}
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell component="th" scope="row">
-                      Status
-                    </TableCell>
-                    <TableCell>{mockBooking.status}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell component="th" scope="row">
-                      Payment Status
-                    </TableCell>
-                    <TableCell>{mockBooking.paymentStatus}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell component="th" scope="row">
-                      Total Amount
-                    </TableCell>
-                    <TableCell>₹{mockBooking.totalAmount}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Divider sx={{ my: 2 }} />
-            <Box
-              sx={{ display: "flex", justifyContent: "space-between", mt: 2 }}
-            >
-              <Button variant="outlined" onClick={handleDownloadReceipt}>
-                Download Receipt
-              </Button>
-              <Button variant="contained" onClick={handleViewBookings}>
-                View My Bookings
-              </Button>
-            </Box>
-          </Grid>
-        </Grid>
-      </Paper>
-    </Container>
+      </Dialog>
+    </Box>
   );
 };
 

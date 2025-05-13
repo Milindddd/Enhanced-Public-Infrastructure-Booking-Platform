@@ -5,11 +5,12 @@ import com.booking.service.FacilityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/facilities")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class FacilityController {
 
     private final FacilityService facilityService;
@@ -36,24 +37,40 @@ public class FacilityController {
         return ResponseEntity.ok(facilityService.getFacilitiesByType(type));
     }
 
+    @GetMapping("/active")
+    public ResponseEntity<List<Facility>> getActiveFacilities() {
+        return ResponseEntity.ok(facilityService.getActiveFacilities());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Facility>> searchFacilitiesByLocation(@RequestParam String location) {
+        return ResponseEntity.ok(facilityService.searchFacilitiesByLocation(location));
+    }
+
     @PostMapping
     public ResponseEntity<Facility> createFacility(@RequestBody Facility facility) {
-        try {
-            Facility createdFacility = facilityService.createFacility(facility);
-            return ResponseEntity.ok(createdFacility);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(facilityService.createFacility(facility));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Facility> updateFacility(@PathVariable Long id, @RequestBody Facility facility) {
         try {
-            Facility updatedFacility = facilityService.updateFacility(id, facility);
-            return ResponseEntity.ok(updatedFacility);
-        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(facilityService.updateFacility(id, facility));
+        } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteFacility(@PathVariable Long id) {
+        facilityService.deleteFacility(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<Void> toggleFacilityStatus(@PathVariable Long id) {
+        facilityService.toggleFacilityStatus(id);
+        return ResponseEntity.ok().build();
     }
 
     @PatchMapping("/{id}/deactivate")

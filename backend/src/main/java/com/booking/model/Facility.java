@@ -3,7 +3,7 @@ package com.booking.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.math.BigDecimal;
-import java.time.LocalTime;
+import java.util.List;
 
 @Entity
 @Data
@@ -20,33 +20,29 @@ public class Facility {
     private String type; // HALL, PARK, CREMATORIUM, GUEST_HOUSE, STADIUM
 
     @Column(nullable = false)
-    private String address;
+    private String description;
 
     @Column(nullable = false)
-    private String description;
+    private String location;
 
     @Column(nullable = false)
     private BigDecimal hourlyRate;
 
     @Column(nullable = false)
-    private LocalTime openingTime;
-
-    @Column(nullable = false)
-    private LocalTime closingTime;
-
-    @Column(nullable = false)
-    private Integer maxCapacity;
+    private Integer capacity;
 
     @Column(nullable = false)
     private Boolean isActive = true;
 
-    // Additional fields for specific facility types
-    @Column
-    private Boolean hasParking;
+    @OneToMany(mappedBy = "facility", cascade = CascadeType.ALL)
+    private List<Booking> bookings;
 
-    @Column
-    private Boolean hasCatering;
+    @Column(nullable = false)
+    private String imageUrl;
 
-    @Column
-    private String amenities; // JSON string of available amenities
+    @Column(nullable = false)
+    private String contactNumber;
+
+    @Column(nullable = false)
+    private String email;
 }

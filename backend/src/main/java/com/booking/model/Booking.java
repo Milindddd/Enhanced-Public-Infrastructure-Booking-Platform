@@ -27,31 +27,27 @@ public class Booking {
     private LocalDateTime endTime;
 
     @Column(nullable = false)
-    private Integer numberOfPeople;
-
-    @Column(nullable = false)
     private BigDecimal totalAmount;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private BookingStatus status;
 
-    @Column
-    private String purpose;
-
-    @Column
-    private String additionalRequirements;
-
-    @Column
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column
     private LocalDateTime updatedAt;
 
+    @Column
+    private String paymentId;
+
+    @Column
+    private String cancellationReason;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate

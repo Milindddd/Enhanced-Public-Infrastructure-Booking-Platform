@@ -1,206 +1,248 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Container,
-  Paper,
+  Box,
+  Card,
+  CardContent,
   Typography,
-  Grid,
   TextField,
   Button,
-  Box,
-  Stepper,
-  Step,
-  StepLabel,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Grid,
   Alert,
+  CircularProgress,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { TimePicker } from "@mui/x-date-pickers/TimePicker";
-import { addHours, format, isAfter, isBefore, parseISO } from "date-fns";
-import { Facility } from "../types";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import axios from "axios";
 
-// Mock data - Replace with API call
-const mockFacility: Facility = {
-  id: "1",
-  name: "Community Hall A",
-  type: "HALL",
-  description: "A spacious community hall perfect for events and gatherings.",
-  capacity: 200,
-  pricePerHour: 1000,
-  availableSlots: [],
-  images: ["https://source.unsplash.com/random/800x600/?hall"],
-};
-
-const steps = ["Select Date & Time", "Review & Confirm", "Payment"];
+interface Facility {
+  id: number;
+  name: string;
+  type: string;
+  description: string;
+  location: string;
+  hourlyRate: number;
+  capacity: number;
+  imageUrl: string;
+}
 
 const FacilityBooking: React.FC = () => {
   const { facilityId } = useParams<{ facilityId: string }>();
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [facility, setFacility] = useState<Facility | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
-  const [duration, setDuration] = useState<number>(1);
-  const [error, setError] = useState<string>("");
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
-  const handleNext = () => {
-    if (activeStep === 0) {
-      if (!selectedDate || !startTime) {
-        setError("Please select both date and time");
-        return;
-      }
-      if (duration < 1 || duration > 5) {
-        setError("Duration must be between 1 and 5 hours");
-        return;
-      }
-      setError("");
+  useEffect(() => {
+    fetchFacility();
+  }, [facilityId]);
+
+  const fetchFacility = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8080/api/facilities/${facilityId}`
+      );
+      setFacility(response.data);
+    } catch (error) {
+      setError("Failed to fetch facility details");
+    } finally {
+      setLoading(false);
     }
-    setActiveStep((prevStep) => prevStep + 1);
   };
 
-  const handleBack = () => {
-    setActiveStep((prevStep) => prevStep - 1);
+  const checkAvailability = async () => {
+    if (!startTime || !endTime) {
+      setError("Please select both start and end times");
+      return;
+    }
+
+    setIsCheckingAvailability(true);
+    try {
+      const response = await axios.get(
+        "http://localhost:8080/api/bookings/check-availability",
+        {
+          params: {
+            facilityId,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+          },
+        }
+      );
+      setIsAvailable(response.data);
+      if (!response.data) {
+        setError("Selected time slot is not available");
+      } else {
+        setError(null);
+      }
+    } catch (error) {
+      setError("Failed to check availability");
+    } finally {
+      setIsCheckingAvailability(false);
+    }
+  };
+
+  const handleBooking = async () => {
+    if (!startTime || !endTime || !isAvailable) {
+      return;
+    }
+
+    try {
+      const response = await axios.post("http://localhost:8080/api/bookings", {
+        facilityId,
+        userId: "user123", // TODO: Replace with actual user ID from auth
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        totalAmount: calculateTotalAmount(),
+      });
+
+      navigate(`/booking-confirmation/${response.data.id}`);
+    } catch (error) {
+      setError("Failed to create booking");
+    }
   };
 
   const calculateTotalAmount = () => {
-    if (!mockFacility) return 0;
-    return mockFacility.pricePerHour * duration;
+    if (!facility || !startTime || !endTime) return 0;
+    const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    return facility.hourlyRate * hours;
   };
 
-  const renderStepContent = (step: number) => {
-    switch (step) {
-      case 0:
-        return (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <DatePicker
-                label="Select Date"
-                value={selectedDate}
-                onChange={(newValue) => setSelectedDate(newValue)}
-                minDate={new Date()}
-                maxDate={addHours(new Date(), 30 * 24)}
-                sx={{ width: "100%" }}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TimePicker
-                label="Start Time"
-                value={startTime}
-                onChange={(newValue) => setStartTime(newValue)}
-                sx={{ width: "100%" }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Duration (hours)</InputLabel>
-                <Select
-                  value={duration}
-                  label="Duration (hours)"
-                  onChange={(e) => setDuration(Number(e.target.value))}
-                >
-                  {[1, 2, 3, 4, 5].map((hours) => (
-                    <MenuItem key={hours} value={hours}>
-                      {hours} {hours === 1 ? "hour" : "hours"}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        );
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-      case 1:
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Booking Summary
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Typography>Facility: {mockFacility.name}</Typography>
-                <Typography>
-                  Date: {selectedDate && format(selectedDate, "PPP")}
-                </Typography>
-                <Typography>
-                  Time: {startTime && format(startTime, "p")}
-                </Typography>
-                <Typography>
-                  Duration: {duration} {duration === 1 ? "hour" : "hours"}
-                </Typography>
-                <Typography variant="h6" sx={{ mt: 2 }}>
-                  Total Amount: ₹{calculateTotalAmount()}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-
-      case 2:
-        return (
-          <Box>
-            <Typography variant="h6" gutterBottom>
-              Payment Details
-            </Typography>
-            <Typography>Amount to Pay: ₹{calculateTotalAmount()}</Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              sx={{ mt: 2 }}
-              onClick={() => {
-                // TODO: Implement payment integration
-                navigate("/booking-confirmation/123");
-              }}
-            >
-              Proceed to Payment
-            </Button>
-          </Box>
-        );
-
-      default:
-        return null;
-    }
-  };
+  if (!facility) {
+    return (
+      <Box p={3}>
+        <Alert severity="error">Facility not found</Alert>
+      </Box>
+    );
+  }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Book {mockFacility.name}
-        </Typography>
+    <Box p={3}>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                Book {facility.name}
+              </Typography>
+              <Typography color="textSecondary" gutterBottom>
+                {facility.type}
+              </Typography>
+              <Typography variant="body1" paragraph>
+                {facility.description}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Location: {facility.location}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Capacity: {facility.capacity}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Rate: ${facility.hourlyRate}/hour
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
 
-        <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Select Time Slot
+              </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Box mb={2}>
+                  <DateTimePicker
+                    label="Start Time"
+                    value={startTime}
+                    onChange={(newValue) => {
+                      setStartTime(newValue);
+                      setIsAvailable(null);
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} fullWidth />
+                    )}
+                  />
+                </Box>
 
-        {renderStepContent(activeStep)}
+                <Box mb={2}>
+                  <DateTimePicker
+                    label="End Time"
+                    value={endTime}
+                    onChange={(newValue) => {
+                      setEndTime(newValue);
+                      setIsAvailable(null);
+                    }}
+                    renderInput={(params) => (
+                      <TextField {...params} fullWidth />
+                    )}
+                  />
+                </Box>
+              </LocalizationProvider>
 
-        <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 3 }}>
-          {activeStep !== 0 && (
-            <Button onClick={handleBack} sx={{ mr: 1 }}>
-              Back
-            </Button>
-          )}
-          {activeStep !== steps.length - 1 && (
-            <Button variant="contained" onClick={handleNext}>
-              {activeStep === steps.length - 2 ? "Review" : "Next"}
-            </Button>
-          )}
-        </Box>
-      </Paper>
-    </Container>
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
+              {isAvailable && (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  Time slot is available!
+                </Alert>
+              )}
+
+              <Box display="flex" gap={2}>
+                <Button
+                  variant="contained"
+                  onClick={checkAvailability}
+                  disabled={!startTime || !endTime || isCheckingAvailability}
+                >
+                  {isCheckingAvailability ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    "Check Availability"
+                  )}
+                </Button>
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleBooking}
+                  disabled={!isAvailable}
+                >
+                  Book Now
+                </Button>
+              </Box>
+
+              {startTime && endTime && (
+                <Typography variant="body2" sx={{ mt: 2 }}>
+                  Total Amount: ${calculateTotalAmount().toFixed(2)}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
   );
 };
 
